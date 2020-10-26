@@ -1,4 +1,5 @@
-__pycache__/tiktok.cpython-37.pyc
+__pycache__/*
+TikTokApi/__pycache__/*
 bmp.log
 geckodriver.log
 server.log
