@@ -1055,7 +1055,7 @@ class TikTokApi:
             BASE_URL, self.__add_new_params__(), urlencode(query)
         )
         b = browser(api_url, proxy=proxy, executablePath=self.executablePath)
-        return self.getData(b, proxy=proxy)["userInfo"]
+        return self.getData(b, proxy=proxy)
 
     def getSuggestedUsersbyID(
         self, userId="6745191554350760966", count=30, **kwargs
