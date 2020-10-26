@@ -9,6 +9,13 @@ from .browser import browser
 BASE_URL = "https://m.tiktok.com/"
 
 
+class TikTokRequestFailed(Exception):
+    """Something went wrong with a request to TikTok."""
+    def __init__(self, status, content):
+        self.status = status
+        self.content = content
+
+
 class TikTokApi:
     def __init__(self, debug=False, request_delay=None, executablePath=None):
         """The TikTokApi class. Used to interact with TikTok.
@@ -37,10 +44,10 @@ class TikTokApi:
             self.browser_version = self.__format_new_params__(b.browser_version)
             self.width = b.width
             self.height = b.height
-        except Exception as e:
+        except Exception as exc:
             if debug:
                 print("The following error occurred, but it was ignored.")
-                print(e)
+                print(exc)
 
             self.timezone_name = ""
             self.browser_language = ""
@@ -95,7 +102,7 @@ class TikTokApi:
             print("Converting response to JSON failed response is below (probably empty)")
             print(response.text)
 
-            raise Exception('Invalid Response')
+            raise TikTokRequestFailed(response.status_code, response.content) from exc
 
     def getBytes(self, b, **kwargs) -> bytes:
         """Returns bytes of a response from TikTok.
