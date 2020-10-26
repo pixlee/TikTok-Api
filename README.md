@@ -18,8 +18,7 @@ Consider sponsoring me [here](https://github.com/sponsors/davidteather)
     - [Examples](https://github.com/davidteather/TikTok-Api/tree/master/examples)
 - [Detailed Documentation](#detailed-documentation)
     - [Common Parameters](#common-parameters)
-    - [Methods](#methods)
-        - [TikTok Class](#the-tiktok-class)
+    - [TikTok Class](#the-tiktok-class)
         - [get_Video_By_TikTok](#the-get_video_by_tiktok-method)
         - [bySound](#the-bysound-method)
         - [getUserObject](#the-getuserobject-method)
@@ -47,6 +46,8 @@ Consider sponsoring me [here](https://github.com/sponsors/davidteather)
         - [discover_type](#the-discover_type-method)
         - [userLiked](#the-userliked-method)
         - [userLikedbyUsername](#the-userlikedbyusername-method)
+    - [TikTokUser Class](#the-tiktokuser-class)
+        - [get_insights](#the-get_insights-method)
 - [Built With](#built-with)
 - [Authors](#authors)
 - [License](#license)
@@ -77,6 +78,7 @@ If you run into any issue try the fix below before posting an issue.
 
 Please don't open an issue if you're experiencing one of these just comment if the provided solution do not work for you.
 
+* [Browser object has no attribute verifyFp](https://github.com/davidteather/TikTok-Api/issues/237) There's so many issues by this error please search (open and closed) issues before posting
 * [Browser closed unexpectedly](https://github.com/davidteather/TikTok-Api/issues/95)
 * [BadStatusLine](https://github.com/davidteather/TikTok-Api/issues/88)
 
@@ -114,19 +116,25 @@ python -m examples.getTrending
 
 #### Common Parameters
 
-* username - the userame of a user you want to find
+* username - the username of a user you want to find
 * secUid - the secUid of the user (you can find in the responses)
 * userId / id - The id of the user
 * proxy - the proxy address of your proxy
 * language - the 2 letter code for your language (this is included in the requests by default to TikTok, but it doesn't seem to do much for me at least)
+* language - Ex: en (doesn't seem to change data)
+* region - Ex: US (doesn't seem to change data)
 
-##### The TikTok class
+#### The TikTok class
 
 ```
-TikTokApi(self, debug=False)
+TikTokApi(self, debug=False, request_delay=None, executablePath=None)
 ```
 
 debug - Enable this if you need some more output.
+
+request_delay - The time to wait in seconds before sending a request.
+
+executablePath - The path to your chromedriver if you don't want global install of chromedriver.
 
 ##### The trending Method
 
@@ -303,7 +311,7 @@ getSuggestedMusicIDCrawler(self, count=30, startingId='6745191554350760966', lan
 api.get_Video_By_DownloadURL(url, language='en', proxy=None)
 ```
 
-url - The download url that's found in the TikTok dictionary. TikTok['video']['downloadAddr']
+url - The download url that's found in the TikTok dictionary. `TikTok['video']['downloadAddr']`
 
 
 ##### The get_Video_By_Url Method
@@ -437,6 +445,31 @@ page completely.
 hashtag - string representation of the hashtag in question (without the '#' prefix)
 
 page_size - integer specifying the maximum number of tiktoks to return in a page (default 30)
+
+
+#### The TikTokUser class
+
+```
+user = TikTokUser(self, user_cookie, debug=False)
+```
+user_cookie - The cookie of the logged in user. To get this string log into the desktop site of TikTok and go to the javascript console and type in document.cookie and copy that string and pass it in here.
+
+
+debug - Enable this if you need some more output.
+
+
+Will be denoted by user for the methods below
+
+##### The get_Video_No_Watermark Method
+```
+user.get_insights(videoID, username=None)
+```
+
+This endpoint returns a the insights/analytics for a specific TikTok video.
+
+videoID - The id of the TikTok
+
+username - You don't need to provide this, but it's possible TikTok compares the refer header in the future so it's more robust to do this.
 
 
 ## Built With
