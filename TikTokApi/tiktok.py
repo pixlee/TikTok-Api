@@ -731,10 +731,13 @@ class TikTokApi:
 
         return response[:count]
 
-    def getHashtagPager(self, hashtag, page_size=30, max_pages=0, proxy=None, language='en', region='US'):
-        """Returns a generator to page through results for a hashtag
+    def getHashtagPager(
+        self, hashtag_id, page_size=30, max_pages=0, proxy=None, language='en', region='US',
+        custom_did=''
+    ):
+        """Return a generator to page through results for a hashtag.
 
-        :param hashtag: The hashtag to search by
+        :param hashtag_id: The Tiktok hashtag id ('challenge' id?) by which to search
         :param page_size: Maximum # of results to be returned per page (may be fewer)
         :param max_pages: Maximum pages to go through.  default will page until tiktok stops it.
         :param language: The 2 letter code of the language to return.
@@ -742,13 +745,13 @@ class TikTokApi:
         :param region: The 2 letter region code.
                        Note: Doesn't seem to have an affect.
         :param proxy: The IP address of a proxy to make requests from.
+        :param custom_did: custom DID to get around tiktok shyness
         """
-        id = self.getHashtagObject(hashtag)['challengeInfo']['challenge']['id']
-
         before = 0
         while True:
             resp = self.hashtagPage(
-                id, page_size=page_size, before=before, proxy=proxy, language=language, region=region
+                hashtag_id, page_size=page_size, before=before, proxy=proxy, language=language,
+                region=region, custom_did=custom_did
             )
 
             has_more = resp['body']['hasMore']
@@ -772,7 +775,9 @@ class TikTokApi:
             if not has_more:
                 return  # all done
 
-    def hashtagPage(self, id, page_size=30, before=0, language='en', region='US', proxy=None):
+    def hashtagPage(
+        self, id, page_size=30, before=0, language='en', region='US', proxy=None, custom_did=''
+    ):
         """Request a page of hashtag results from tiktok
 
         :param id: id of the hashtag ('challenge') to search
@@ -783,6 +788,7 @@ class TikTokApi:
         :param region: The 2 letter region code.
                        Note: Doesn't seem to have an affect.
         :param proxy: The IP address of a proxy to make requests from.
+        :param custom_did: custom DID to get around tiktok shyness
         """
         query = {
             'count': page_size,
@@ -800,7 +806,7 @@ class TikTokApi:
             BASE_URL, self.__add_new_params__(), urlencode(query)
         )
         b = browser(api_url, proxy=proxy)
-        return self.getData(b, proxy=proxy, language=language)
+        return self.getData(b, proxy=proxy, language=language, custom_did=custom_did)
 
     def getHashtagObject(self, hashtag, **kwargs) -> dict:
         """Returns a hashtag object.
