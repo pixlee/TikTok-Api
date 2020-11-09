@@ -685,7 +685,7 @@ class TikTokApi:
             try:
                 for t in res["itemList"]:
                     response.append(t)
-            except:
+            except Exception:
                 if self.debug:
                     print(res)
 
@@ -890,7 +890,6 @@ class TikTokApi:
             proxy,
             maxCount,
         ) = self.__process_kwargs__(kwargs)
-        did = kwargs.get("custom_did", None)
         query = {
             "itemId": id,
             "language": language,
@@ -915,7 +914,6 @@ class TikTokApi:
             proxy,
             maxCount,
         ) = self.__process_kwargs__(kwargs)
-        custom_did = kwargs.get("custom_did", None)
         if "@" in url and "/video/" in url:
             post_id = url.split("/video/")[1].split("?")[0]
         else:

@@ -1,11 +1,11 @@
 import asyncio
-import pyppeteer
+import logging
 import random
-import time
 import string
 import requests
-import logging
 from threading import Thread
+
+import pyppeteer
 
 # Import Detection From Stealth
 from .stealth import stealth
@@ -13,6 +13,8 @@ from .stealth import stealth
 from .get_acrawler import get_acrawler
 
 async_support = False
+
+logger = logging.getLogger(__name__)
 
 
 def set_async():
@@ -52,7 +54,11 @@ class browser:
         self.did = kwargs.get("custom_did", None)
         find_redirect = kwargs.get("find_redirect", False)
 
-        self.userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.111 Safari/537.36"
+        self.userAgent = (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/86.0.4240.111 Safari/537.36"
+        )
 
         global args
         global options
@@ -69,17 +75,14 @@ class browser:
             ]
         else:
             self.args = args
-            self.args.append("--user-agent=" + self.userAgent)
+            self.args.append(f"--user-agent={self.userAgent}")
 
-        if self.proxy != None:
+        if self.proxy is not None:
             if "@" in self.proxy:
                 self.args.append(
-                    "--proxy-server="
-                    + self.proxy.split(":")[0]
-                    + "://"
-                    + self.proxy.split("://")[1].split(":")[1].split("@")[1]
-                    + ":"
-                    + self.proxy.split("://")[1].split(":")[2]
+                    f"--proxy-server={self.proxy.split(':')[0]}://"
+                    f"{self.proxy.split('://')[1].split(':')[1].split('@')[1]}:"
+                    f"{self.proxy.split('://')[1].split(':')[2]}"
                 )
             else:
                 self.args.append("--proxy-server=" + self.proxy)
@@ -95,7 +98,7 @@ class browser:
 
         self.options.update(options)
 
-        if self.executablePath != None:
+        if self.executablePath is not None:
             self.options["executablePath"] = self.executablePath
 
         if async_support:
@@ -118,7 +121,8 @@ class browser:
                     self.loop.run_until_complete(self.newParams())
                 else:
                     self.loop.run_until_complete(self.start())
-            except:
+            except Exception as exc:
+                logger.exception(exc)
                 self.loop.close()
 
     def __start_background_loop(self, loop):
@@ -130,16 +134,28 @@ class browser:
         self.page = await self.browser.newPage()
         await self.page.goto("about:blank")
 
-        # self.browser_language = await self.page.evaluate("""() => { return navigator.language || navigator.userLanguage; }""")
         self.browser_language = ""
-        # self.timezone_name = await self.page.evaluate("""() => { return Intl.DateTimeFormat().resolvedOptions().timeZone; }""")
         self.timezone_name = ""
-        # self.browser_platform = await self.page.evaluate("""() => { return window.navigator.platform; }""")
         self.browser_platform = ""
-        # self.browser_name = await self.page.evaluate("""() => { return window.navigator.appCodeName; }""")
         self.browser_name = ""
-        # self.browser_version = await self.page.evaluate("""() => { return window.navigator.appVersion; }""")
         self.browser_version = ""
+        """
+        self.browser_language = await self.page.evaluate(
+            "() => { return navigator.language || navigator.userLanguage; }"
+        )
+        self.timezone_name = await self.page.evaluate(
+            "() => { return Intl.DateTimeFormat().resolvedOptions().timeZone; }"
+        )
+        self.browser_platform = await self.page.evaluate(
+            "() => { return window.navigator.platform; }"
+        )
+        self.browser_name = await self.page.evaluate(
+            "() => { return window.navigator.appCodeName; }"
+        )
+        self.browser_version = await self.page.evaluate(
+            "() => { return window.navigator.appVersion; }"
+        )
+        """
 
         self.width = await self.page.evaluate("""() => { return screen.width; }""")
         self.height = await self.page.evaluate("""() => { return screen.height; }""")
@@ -154,13 +170,11 @@ class browser:
         self.page = await self.browser.newPage()
 
         await self.page.evaluateOnNewDocument(
-            """() => {
-    delete navigator.__proto__.webdriver;
-        }"""
+            "() => { delete navigator.__proto__.webdriver; }"
         )
 
         # Check for user:pass proxy
-        if self.proxy != None:
+        if self.proxy is not None:
             if "@" in self.proxy:
                 await self.page.authenticate(
                     {
@@ -187,31 +201,21 @@ class browser:
             for i in range(16)
         )
 
-        if self.did == None:
+        if self.did is None:
             self.did = str(random.randint(10000, 999999999))
 
         await self.page.evaluate("() => { " + get_acrawler() + " }")
         self.signature = await self.page.evaluate(
-            '''() => {
-        var url = "'''
-            + self.url
-            + "&verifyFp="
-            + self.verifyFp
-            + """&did="""
-            + self.did
-            + """"
-        var token = window.byted_acrawler.sign({url: url});
-        return token;
-        }"""
+            '() => {'
+            f' var url = "{self.url}&verifyFp={self.verifyFp}&did={self.did}";'
+            '  var token = window.byted_acrawler.sign({url: url});'
+            '  return token;'
+            '}'
         )
 
-        if self.api_url != None:
+        if self.api_url is not None:
             await self.page.goto(
-                self.url
-                + "&verifyFp="
-                + self.verifyFp
-                + "&_signature="
-                + self.signature,
+                f"{self.url}&verifyFp={self.verifyFp}&_signature={self.signature}",
                 {"waitUntil": "load"},
             )
 
@@ -228,13 +232,11 @@ class browser:
             self.page = await self.browser.newPage()
 
             await self.page.evaluateOnNewDocument(
-                """() => {
-        delete navigator.__proto__.webdriver;
-    }"""
+                "() => { delete navigator.__proto__.webdriver; }"
             )
 
             # Check for user:pass proxy
-            if self.proxy != None:
+            if self.proxy is not None:
                 if "@" in self.proxy:
                     await self.page.authenticate(
                         {
@@ -264,12 +266,13 @@ class browser:
             await self.browser.close()
             self.browser.process.communicate()
 
-        except:
+        except Exception:
+            logger.exception()
             await self.browser.close()
             self.browser.process.communicate()
 
     def __format_proxy(self, proxy):
-        if proxy != None:
+        if proxy is not None:
             return {"http": proxy, "https": proxy}
         else:
             return None
