@@ -115,7 +115,7 @@ class browser:
             fut.result()
         else:
             try:
-                self.loop = asyncio.new_event_loop()
+                self.loop = asyncio.get_event_loop()
                 if find_redirect:
                     self.loop.run_until_complete(self.find_redirect())
                 elif kwargs.get("newParams", False):
