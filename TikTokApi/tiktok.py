@@ -721,15 +721,19 @@ class TikTokApi:
                 region=region, custom_did=custom_did
             )
 
-            has_more = resp['body']['hasMore']
+            if resp['statusCode'] == 10201 and resp['statusMsg'] == '':
+                raise Exception(f"page size too big ({page_size})")
+
             try:
-                page = resp['body']['itemListData']
+                has_more = resp['hasMore']
+                page = resp['itemList']
             except KeyError:
+                breakpoint()
                 # No mo results
                 page = []
                 has_more = False
 
-            before = resp['body']['maxCursor']
+            before = resp['cursor']
 
             yield page
             max_pages -= 1
@@ -759,17 +763,14 @@ class TikTokApi:
         """
         query = {
             'count': page_size,
-            'id': id,
+            'challengeID': id,
             'type': 3,
             'secUid': '',
-            'minCursor': before,
-            'maxCursor': 0,
-            'shareUid': '',
-            'recType': '',
-            'region': region,
-            'lang': language,
+            'cursor': before,
+            'sourceType': "8",
+            'language': language,
         }
-        api_url = "{}share/item/list?{}&{}".format(
+        api_url = "{}api/challenge/item_list/?{}&{}".format(
             BASE_URL, self.__add_new_params__(), urlencode(query)
         )
         b = browser(api_url, proxy=proxy)
