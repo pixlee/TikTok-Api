@@ -132,10 +132,10 @@ class browser:
                     self.loop.run_until_complete(self.newParams())
                 else:
                     self.loop.run_until_complete(self.start())
-            except Exception as exc:
-                logger.exception(exc)
+            except Exception:
                 if self.loop:
                     self.loop.close()
+                raise
 
     def __start_background_loop(self, loop):
         asyncio.set_event_loop(loop)
