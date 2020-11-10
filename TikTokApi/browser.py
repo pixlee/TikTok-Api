@@ -115,7 +115,14 @@ class browser:
             fut.result()
         else:
             try:
-                self.loop = asyncio.get_event_loop()
+                try:
+                    self.loop = asyncio.get_event_loop()
+                    logger.debug('got event loop')
+                except RuntimeError:
+                    logger.debug('No loop, making a new one')
+                    self.loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(self.loop)
+
                 if find_redirect:
                     self.loop.run_until_complete(self.find_redirect())
                 elif kwargs.get("newParams", False):
