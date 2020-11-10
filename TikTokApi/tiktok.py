@@ -787,8 +787,9 @@ class TikTokApi:
         api_url = "{}api/challenge/item_list/?{}&{}".format(
             BASE_URL, self.__add_new_params__(), urlencode(query)
         )
-        b = browser(api_url, proxy=proxy)
-        return self.getData(b, proxy=proxy, language=language, custom_did=custom_did)
+        return self.getData(
+            self.browser, url=api_url, proxy=proxy, language=language, custom_did=custom_did
+        )
 
     def getHashtagObject(self, hashtag, **kwargs) -> dict:
         """Returns a hashtag object.
@@ -994,7 +995,7 @@ class TikTokApi:
             proxy,
             maxCount,
         ) = self.__process_kwargs__(kwargs)
-        return self.getUser(username, **kwargs)["user"]
+        return self.getUser(username, **kwargs)["userInfo"]["user"]
 
     def getUser(self, username, **kwargs) -> dict:
         """Gets the full exposed user object
