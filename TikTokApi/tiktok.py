@@ -722,13 +722,12 @@ class TikTokApi:
             )
 
             if resp['statusCode'] == 10201 and resp['statusMsg'] == '':
-                raise Exception(f"page size too big ({page_size})")
+                raise ValueError(f"page size too big ({page_size})")
 
             try:
                 has_more = resp['hasMore']
                 page = resp['itemList']
             except KeyError:
-                breakpoint()
                 # No mo results
                 page = []
                 has_more = False
