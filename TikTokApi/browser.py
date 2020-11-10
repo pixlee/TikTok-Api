@@ -101,6 +101,7 @@ class browser:
         if self.executablePath is not None:
             self.options["executablePath"] = self.executablePath
 
+        self.loop = None
         if async_support:
             loop = asyncio.new_event_loop()
             t = Thread(target=self.__start_background_loop, args=(loop,), daemon=True)
@@ -123,7 +124,8 @@ class browser:
                     self.loop.run_until_complete(self.start())
             except Exception as exc:
                 logger.exception(exc)
-                self.loop.close()
+                if self.loop:
+                    self.loop.close()
 
     def __start_background_loop(self, loop):
         asyncio.set_event_loop(loop)
