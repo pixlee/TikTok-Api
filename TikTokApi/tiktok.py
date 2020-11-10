@@ -4,19 +4,25 @@ import time
 import logging
 from urllib.parse import urlencode, quote
 from .browser import browser, get_playwright
-from playwright import sync_playwright
-import logging
-from .utilities import update_messager
 
 BASE_URL = "https://m.tiktok.com/"
 
+logger = logging.getLogger(__name__)
+
+
+class TikTokRequestFailed(Exception):
+    """Something went wrong with a request to TikTok."""
+    def __init__(self, status, content):
+        self.status = status
+        self.content = content
+
+
 class TikTokApi:
     __instance = None
+
     def __init__(self, **kwargs):
         """The TikTokApi class. Used to interact with TikTok.
 
-        :param logging_level: The logging level you want the program to run at
-        :param request_delay: The amount of time to wait before making a request.
         :param executablePath: The location of the chromedriver.exe
         """
         # Forces Singleton
@@ -24,8 +30,7 @@ class TikTokApi:
             TikTokApi.__instance = self
         else:
             raise Exception("Only one TikTokApi object is allowed")
-        logging.basicConfig(level=kwargs.get("logging_level", logging.CRITICAL))
-        logging.info("Class initalized")
+
         self.executablePath = kwargs.get("executablePath", None)
 
         self.userAgent = (
@@ -52,8 +57,9 @@ class TikTokApi:
             )
             self.width = self.browser.width
             self.height = self.browser.height
-        except Exception as e:
-            logging.warning("An error occured but it was ignored.")
+        except Exception as exc:
+            logger.warning("An error occured but it was ignored.")
+            logger.debug(exc, exc_info=True)
 
             self.timezone_name = ""
             self.browser_language = ""
@@ -77,11 +83,11 @@ class TikTokApi:
     def __del__(self):
         try:
             self.browser.clean_up()
-        except:
+        except Exception:
             pass
         try:
             get_playwright().stop()
-        except:
+        except Exception:
             pass
         TikTokApi.__instance = None
 
@@ -106,13 +112,13 @@ class TikTokApi:
         if self.request_delay is not None:
             time.sleep(self.request_delay)
 
-        if self.proxy != None:
+        if self.proxy is not None:
             proxy = self.proxy
 
         verify_fp, did, signature = self.browser.sign_url(**kwargs)
         query = {"verifyFp": verify_fp, "did": did, "_signature": signature}
         url = "{}&{}".format(kwargs["url"], urlencode(query))
-        r = requests.get(
+        response = requests.get(
             url,
             headers={
                 "authority": "m.tiktok.com",
@@ -132,14 +138,12 @@ class TikTokApi:
             proxies=self.__format_proxy(proxy),
         )
         try:
-            return r.json()
-        except Exception as e:
-            logging.error(e)
-            logging.error(
-                "Converting response to JSON failed response is below (probably empty)"
-            )
-            logging.info(r.text)
-            raise Exception("Invalid Response")
+            return response.json()
+        except Exception as exc:
+            logger.error(exc)
+            logger.error("Converting response to JSON failed response is below (probably empty)")
+            logger.info(response.text)
+            raise TikTokRequestFailed(response.status_code, response.content) from exc
 
     def getBytes(self, b, **kwargs) -> bytes:
         """Returns bytes of a response from TikTok.
@@ -222,7 +226,7 @@ class TikTokApi:
                 response.append(t)
 
             if not res["hasMore"] and not first:
-                logging.info("TikTok isn't sending more TikToks beyond this point.")
+                logger.info("TikTok isn't sending more TikToks beyond this point.")
                 return response[:count]
 
             realCount = count - len(response)
@@ -303,7 +307,7 @@ class TikTokApi:
                 for x in data["challengeInfoList"]:
                     response.append(x)
             else:
-                logging.info("TikTok is not sending videos beyond this point.")
+                logger.info("TikTok is not sending videos beyond this point.")
                 break
 
             offsetCount = len(response)
@@ -364,7 +368,7 @@ class TikTokApi:
                     response.append(t)
 
             if not res["hasMore"] and not first:
-                logging.info("TikTok isn't sending more TikToks beyond this point.")
+                logger.info("TikTok isn't sending more TikToks beyond this point.")
                 return response
 
             realCount = count - len(response)
@@ -423,15 +427,20 @@ class TikTokApi:
             maxCount,
         ) = self.__process_kwargs__(kwargs)
 
-        api_url = "https://m.tiktok.com/api/item_list/?{}&count={}&id={}&type=1&secUid={}" "&minCursor={}&maxCursor={}&sourceType=8&appId=1233&region={}&language={}".format(
-            self.__add_new_params__(),
-            page_size,
-            str(userID),
-            str(secUID),
-            minCursor,
-            maxCursor,
-            region,
-            language,
+        query = {
+            'count': page_size,
+            'id': userID,
+            'type': 1,
+            'secUid': secUID,
+            'minCursor': minCursor,
+            'maxCursor': maxCursor,
+            'sourceType': 8,
+            'appId': 1233,
+            'region': region,
+            'language': language
+        }
+        api_url = "{}api/item_list/?{}&{}".format(
+            BASE_URL, self.__add_new_params__(), urlencode(query)
         )
 
         return self.getData(self.browser, url=api_url, **kwargs)
@@ -533,7 +542,7 @@ class TikTokApi:
             try:
                 res["items"]
             except Exception:
-                logging.error("User's likes are most likely private")
+                logger.error("User's likes are most likely private")
                 return []
 
             if "items" in res.keys():
@@ -541,7 +550,7 @@ class TikTokApi:
                     response.append(t)
 
             if not res["hasMore"] and not first:
-                logging.info("TikTok isn't sending more TikToks beyond this point.")
+                logger.info("TikTok isn't sending more TikToks beyond this point.")
                 return response
 
             realCount = count - len(response)
@@ -623,7 +632,7 @@ class TikTokApi:
                 response.append(t)
 
             if not res["hasMore"]:
-                logging.info("TikTok isn't sending more TikToks beyond this point.")
+                logger.info("TikTok isn't sending more TikToks beyond this point.")
                 return response
 
             realCount = count - len(response)
@@ -697,12 +706,89 @@ class TikTokApi:
                 response.append(t)
 
             if not res["hasMore"]:
-                logging.info("TikTok isn't sending more TikToks beyond this point.")
+                logger.info("TikTok isn't sending more TikToks beyond this point.")
                 return response
 
             offset += maxCount
 
         return response[:required_count]
+
+    def getHashtagPager(
+        self, hashtag_id, page_size=30, max_pages=0, proxy=None, language='en', region='US',
+        custom_did=''
+    ):
+        """Return a generator to page through results for a hashtag.
+
+        :param hashtag_id: The Tiktok hashtag id ('challenge' id?) by which to search
+        :param page_size: Maximum # of results to be returned per page (may be fewer)
+        :param max_pages: Maximum pages to go through.  default will page until tiktok stops it.
+        :param language: The 2 letter code of the language to return.
+                         Note: Doesn't seem to have an affect.
+        :param region: The 2 letter region code.
+                       Note: Doesn't seem to have an affect.
+        :param proxy: The IP address of a proxy to make requests from.
+        :param custom_did: custom DID to get around tiktok shyness
+        """
+        before = 0
+        while True:
+            resp = self.hashtagPage(
+                hashtag_id, page_size=page_size, before=before, proxy=proxy, language=language,
+                region=region, custom_did=custom_did
+            )
+
+            if resp['statusCode'] == 10201 and resp['statusMsg'] == '':
+                raise ValueError(f"page size too big ({page_size})")
+
+            try:
+                has_more = resp['hasMore']
+                page = resp['itemList']
+            except KeyError:
+                # No mo results
+                page = []
+                has_more = False
+
+            before = resp['cursor']
+
+            yield page
+            max_pages -= 1
+
+            # comparing directly to zero so that the default max_pages (0) will never trip this
+            # therefore paging to the end.
+            if max_pages == 0:
+                has_more = False
+
+            if not has_more:
+                return  # all done
+
+    def hashtagPage(
+        self, id, page_size=30, before=0, language='en', region='US', proxy=None, custom_did=''
+    ):
+        """Request a page of hashtag results from tiktok
+
+        :param id: id of the hashtag ('challenge') to search
+        :param page_size: Maximum # of results to be returned per page (may be fewer)
+        :param before: pagination cursor value.  Used by the paging generator.
+        :param language: The 2 letter code of the language to return.
+                         Note: Doesn't seem to have an affect.
+        :param region: The 2 letter region code.
+                       Note: Doesn't seem to have an affect.
+        :param proxy: The IP address of a proxy to make requests from.
+        :param custom_did: custom DID to get around tiktok shyness
+        """
+        query = {
+            'count': page_size,
+            'challengeID': id,
+            'type': 3,
+            'secUid': '',
+            'cursor': before,
+            'sourceType': "8",
+            'language': language,
+        }
+        api_url = "{}api/challenge/item_list/?{}&{}".format(
+            BASE_URL, self.__add_new_params__(), urlencode(query)
+        )
+        b = browser(api_url, proxy=proxy)
+        return self.getData(b, proxy=proxy, language=language, custom_did=custom_did)
 
     def getHashtagObject(self, hashtag, **kwargs) -> dict:
         """Returns a hashtag object.
@@ -793,7 +879,7 @@ class TikTokApi:
                 response.append(t)
 
             if not res["hasMore"] and not first:
-                logging.info("TikTok isn't sending more TikToks beyond this point.")
+                logger.info("TikTok isn't sending more TikToks beyond this point.")
                 return response[:count]
 
             realCount = count - len(response)
@@ -817,7 +903,6 @@ class TikTokApi:
             proxy,
             maxCount,
         ) = self.__process_kwargs__(kwargs)
-        did = kwargs.get("custom_did", None)
         query = {
             "itemId": id,
             "language": language,
@@ -842,7 +927,6 @@ class TikTokApi:
             proxy,
             maxCount,
         ) = self.__process_kwargs__(kwargs)
-        custom_did = kwargs.get("custom_did", None)
         if "@" in url and "/video/" in url:
             post_id = url.split("/video/")[1].split("?")[0]
         else:
@@ -930,8 +1014,7 @@ class TikTokApi:
         api_url = "{}api/user/detail/?{}&{}".format(
             BASE_URL, self.__add_new_params__(), urlencode(query)
         )
-
-        return self.getData(self.browser, url=api_url, **kwargs)["userInfo"]
+        return self.getData(self.browser, url=api_url, **kwargs)
 
     def getSuggestedUsersbyID(
         self, userId="6745191554350760966", count=30, **kwargs
