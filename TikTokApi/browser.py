@@ -118,7 +118,7 @@ class browser:
                 try:
                     self.loop = asyncio.get_event_loop()
                     logger.debug('got event loop')
-                except RuntimeError:
+                except RuntimeError:  # raised by asyncio when no event loop exists
                     logger.debug('No loop, making a new one')
                     self.loop = asyncio.new_event_loop()
                     asyncio.set_event_loop(self.loop)
