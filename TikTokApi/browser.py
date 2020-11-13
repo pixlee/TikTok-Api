@@ -177,6 +177,22 @@ class browser:
 
         return 0
 
+    def generate_verifyFp(self):
+        pattern = "verify_{}_{}_{}_{}_{}_{}"
+        characters = string.ascii_lowercase + string.ascii_uppercase + string.digits
+
+        chunks = [
+            ''.join(random.choice(characters) for i in range(8)),
+            ''.join(random.choice(characters) for i in range(8)),
+            ''.join(random.choice(characters) for i in range(4)),
+            ''.join(random.choice(characters) for i in range(4)),
+            ''.join(random.choice(characters) for i in range(4)),
+            ''.join(random.choice(characters) for i in range(12)),
+        ]
+
+        token = pattern.format(*chunks)
+        return token
+
     async def start(self):
         self.browser = await pyppeteer.launch(self.options)
         self.page = await self.browser.newPage()
@@ -206,12 +222,7 @@ class browser:
             """() => {return navigator.userAgent; }"""
         )
 
-        self.verifyFp = "".join(
-            random.choice(
-                string.ascii_lowercase + string.ascii_uppercase + string.digits
-            )
-            for i in range(16)
-        )
+        self.verifyFp = self.generate_verifyFp()
 
         if self.did is None:
             self.did = str(random.randint(10000, 999999999))
