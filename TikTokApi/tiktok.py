@@ -16,6 +16,13 @@ class TikTokRequestFailed(Exception):
         self.content = content
 
 
+class TikTokCaptchaChallenge(Exception):
+    """TikTok is presenting a captcha challenge"""
+    def __init__(self, code, content):
+        self.code = code
+        self.content = content
+
+
 class TikTokApi:
     def __init__(self, **kwargs):
         """The TikTokApi class. Used to interact with TikTok.
@@ -108,7 +115,7 @@ class TikTokApi:
             proxies=self.__format_proxy(proxy),
         )
         try:
-            return response.json()
+            payload = response.json()
         except Exception as exc:
             if self.debug:
                 print(exc)
@@ -117,6 +124,16 @@ class TikTokApi:
             print(response.text)
 
             raise TikTokRequestFailed(response.status_code, response.content) from exc
+
+        code = payload.get('statusCode')
+        if code is None:
+            code = payload.get('code')
+
+        if code == 0:
+            return payload
+
+        if code == 10000:
+            raise TikTokCaptchaChallenge(code, payload)
 
     def getBytes(self, b, **kwargs) -> bytes:
         """Returns bytes of a response from TikTok.
