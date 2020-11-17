@@ -1,3 +1,4 @@
+import logging
 import random
 import requests
 import time
@@ -7,6 +8,8 @@ from .browser import browser
 
 
 BASE_URL = "https://m.tiktok.com/"
+
+logger = logging.getLogger(__name__)
 
 
 class TikTokRequestFailed(Exception):
@@ -114,6 +117,9 @@ class TikTokApi:
             },
             proxies=self.__format_proxy(proxy),
         )
+        logger.info(f"Made tiktok request to {b.url}, received HTTP {response.status_code} body:")
+        logger.info(f"{response.content}")
+
         try:
             payload = response.json()
         except Exception as exc:
@@ -129,14 +135,16 @@ class TikTokApi:
         if code is None:
             code = payload.get('code')
 
-        if code == 0:
-            return payload
-
         if code == 10000:
             raise TikTokCaptchaChallenge(code, payload)
 
+        if code != 0:
+            raise TikTokRequestFailed(code, response.content)
+
+        return payload
+
     def getBytes(self, b, **kwargs) -> bytes:
-        """Returns bytes of a response from TikTok.
+        """Return bytes of a response from TikTok.
 
         :param api_url: the base string without a signature
 
