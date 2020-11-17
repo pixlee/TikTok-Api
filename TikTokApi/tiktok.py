@@ -458,9 +458,11 @@ class TikTokApi:
             proxy,
             maxCount,
         ) = self.__process_kwargs__(kwargs)
-        data = self.getUserObject(username, **kwargs)
+        resp = self.getUserObject(username, **kwargs)
 
-        while True:
+        data = resp.get('userInfo', {}).get('user')
+
+        while data:
             resp = self.userPage(
                 data["id"],
                 data["secUid"],
@@ -482,6 +484,12 @@ class TikTokApi:
 
             if not resp["hasMore"]:
                 return  # all done
+
+        code = resp.get('statusCode')
+        if code is None:
+            code = resp.get('code')
+
+        raise TikTokRequestFailed(code, resp)
 
     def userLiked(
         self, userID, secUID, count=30, minCursor=0, maxCursor=0, **kwargs
@@ -994,7 +1002,7 @@ class TikTokApi:
             proxy,
             maxCount,
         ) = self.__process_kwargs__(kwargs)
-        return self.getUser(username, **kwargs)["user"]
+        return self.getUser(username, **kwargs)
 
     def getUser(self, username, **kwargs) -> dict:
         """Gets the full exposed user object
